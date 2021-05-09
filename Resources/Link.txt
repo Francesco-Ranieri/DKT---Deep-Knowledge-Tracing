@@ -1,8 +1,93 @@
-https://keras.io/guides/
+Code
 
-Intro
-https://www.simplilearn.com/tutorials/deep-learning-tutorial/what-is-tensorflow
+	https://keras.io/guides/
+	
+	_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 
-https://stackoverflow.com/questions/44747343/keras-input-explanation-input-shape-units-batch-size-dim-etc#:~:text=The%20input%20shape&text=In%20Keras%2C%20the%20input%20layer,50%2C50%2C3)%20.
+	RELU (Rectified Linear Activation Function)
 
-https://www.techleer.com/articles/242-backpropagation-a-supervised-learning-neural-network-method/
+		https://machinelearningmastery.com/rectified-linear-activation-function-for-deep-learning-neural-networks/
+
+	_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+_________________________________________________________
+
+Deep Learning 
+
+	https://towardsdatascience.com/deep-learning-d5fe55326e57#.16qz1128q
+
+	https://www.youtube.com/watch?v=aircAruvnKk
+
+	_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+	Artificial Neuron
+		
+		https://en.wikipedia.org/wiki/Artificial_neuron
+
+	_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+_________________________________________________________
+
+Tensor
+
+	https://www.youtube.com/watch?v=f5liqUk0ZTw
+
+	https://www.youtube.com/watch?v=bpG3gqDM80w
+
+_________________________________________________________
+
+Keras
+
+	https://www.simplilearn.com/tutorials/deep-learning-tutorial/what-is-tensorflow
+
+	https://stackoverflow.com/questions/44747343/keras-input-explanation-input-shape-units-batch-size-dim-etc#:~:text=The%20input%20shape&text=In%20Keras%2C%20the%20input%20layer,50%2C50%2C3)%20.
+
+_________________________________________________________
+
+Supervised Learning
+
+	https://www.techleer.com/articles/242-backpropagation-a-supervised-learning-neural-network-method/
+
+_________________________________________________________
+
+Activation Function
+
+	https://www.geeksforgeeks.org/activation-functions-neural-networks/
+
+_________________________________________________________
+
+FFNN
+
+	https://www.youtube.com/watch?v=jTzJ9zjC8nU
+
+	https://www.youtube.com/watch?v=PcU2RCWuDSI
+
+	https://it.wikipedia.org/wiki/Rete_neurale_feed-forward
+
+_________________________________________________________
+
+RNN
+
+	https://it.wikipedia.org/wiki/Rete_neurale_ricorrente
+
+	https://www.youtube.com/watch?v=Y2wfIKQyd1I
+
+	https://www.ibm.com/cloud/learn/recurrent-neural-networks
+
+	https://towardsdatascience.com/machine-learning-recurrent-neural-networks-and-long-short-term-memory-lstm-python-keras-example-86001ceaaebc
+
+_________________________________________________________
+
+FFNN vs RNN
+
+	https://stats.stackexchange.com/questions/2213/whats-the-difference-between-feed-forward-and-recurrent-neural-networks
+
+	https://www.youtube.com/watch?v=BJz2QAz0YzM
+
+_________________________________________________________
+
+GRADIENT DESCENT
+
+	https://www.youtube.com/watch?v=IHZwWFHWa-w
+
+_________________________________________________________
