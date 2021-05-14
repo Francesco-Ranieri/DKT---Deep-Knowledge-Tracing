@@ -75,6 +75,14 @@ RNN
 
 	https://towardsdatascience.com/machine-learning-recurrent-neural-networks-and-long-short-term-memory-lstm-python-keras-example-86001ceaaebc
 
+	_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+	DROPOUT
+
+	http://laid.delanover.com/dropout-explained-and-implementation-in-tensorflow/
+
+	_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
 _________________________________________________________
 
 FFNN vs RNN
