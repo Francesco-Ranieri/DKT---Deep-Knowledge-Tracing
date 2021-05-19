@@ -14,6 +14,7 @@
 #
 import os
 import sys
+import tensorflow as tf
 import numpy as np
 from keras.preprocessing import sequence
 from keras.utils import np_utils
@@ -22,7 +23,6 @@ from keras.layers.core import Masking
 from keras.layers.recurrent import LSTM
 from keras import backend as K
 from sklearn.metrics import roc_auc_score
-import theano.tensor as Th
 import random
 import math
 import argparse
@@ -71,7 +71,8 @@ def main():
     def loss_function(y_true, y_pred):
         skill = y_true[:, :, 0:num_skills]
         obs = y_true[:, :, num_skills]
-        rel_pred = Th.sum(y_pred * skill, axis=2)
+        rel_pred = tf.math.reduce_sum(y_pred * skill, axis=2)
+        # rel_pred = Th.sum(y_pred * skill, axis=2)
 
         # keras implementation does a mean on the last dimension (axis=-1) which
         # it assumes is a singleton dimension. But in our context that would
@@ -106,7 +107,7 @@ def main():
 
     # training function
     def trainer(X, Y):
-        overall_loss[0] += model.train_on_batch(X, Y)[0]
+        overall_loss[0] += model.train_on_batch(X, y=Y)[0]
 
     # prediction
     def predictor(X, Y):
@@ -114,7 +115,7 @@ def main():
         skill = Y[:, :, 0:num_skills]
         obs = Y[:, :, num_skills]
         y_pred = np.squeeze(np.array(batch_activations))
-0
+
         rel_pred = np.sum(y_pred * skill, axis=2)
 
         for b in range(0, X.shape[0]):
