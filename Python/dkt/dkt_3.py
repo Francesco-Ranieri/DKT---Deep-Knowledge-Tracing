@@ -29,14 +29,20 @@ import argparse
 
 from tensorflow.python.keras.layers import TimeDistributed, Dense
 
+tf.compat.v1.enable_eager_execution(
+    config=None, device_policy=None, execution_mode=None
+)
+
 
 def main():
     parser = argparse.ArgumentParser(description='Process some integers.')
     parser.add_argument('--dataset', type=str, help='Dataset file', required=True)
     parser.add_argument('--splitfile', type=str, help='Split file', required=True)
     parser.add_argument('--hiddenunits', type=int, help='Number of LSTM hidden units.', default=200, required=False)
-    parser.add_argument('--batchsize', type=int, help='Number of sequences to process in a batch.', default=5, required=False)
-    parser.add_argument('--timewindow', type=int, help='Number of timesteps to process in a batch.', default=100, required=False)
+    parser.add_argument('--batchsize', type=int, help='Number of sequences to process in a batch.', default=5,
+                        required=False)
+    parser.add_argument('--timewindow', type=int, help='Number of timesteps to process in a batch.', default=100,
+                        required=False)
     parser.add_argument('--epochs', type=int, help='Number of epochs.', default=50, required=False)
     args = parser.parse_args()
 
@@ -96,18 +102,20 @@ def main():
     # readout layer. TimeDistributedDense uses the same weights for all
     # time steps.
 
-    model.add(TimeDistributed(Dense(units=num_skills, activation='sigmoid')))
-    ##model.add(TimeDistributedDense(input_dim=hidden_units, output_dim=num_skills, activation='sigmoid'))
+    model.add(Dense(units=num_skills, activation='sigmoid'))
+    # model.add(TimeDistributedDense(input_dim=hidden_units, output_dim=num_skills, activation='sigmoid'))
 
     # optimize with rmsprop which dynamically adapts the learning
     # rate of each weight.
-    model.compile(loss=loss_function, optimizer='rmsprop') #class_mode="binary"
+    model.compile(loss=loss_function, optimizer='rmsprop', run_eagerly=True)  # class_mode="binary"
 
     print(model.summary())
 
     # training function
     def trainer(X, Y):
-        overall_loss[0] += model.train_on_batch(X, y=Y)[0]
+        Y = tf.cast(Y, tf.float32)
+        #Y = np.asfarray(Y, float)
+        overall_loss[0] += model.train_on_batch(X, y=Y)
 
     # prediction
     def predictor(X, Y):
