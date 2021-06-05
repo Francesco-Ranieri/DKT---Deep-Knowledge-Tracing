@@ -93,9 +93,15 @@ FFNN vs RNN
 
 _________________________________________________________
 
+PyTorch
+		
+	https://en.wikipedia.org/wiki/PyTorch
 
+	https://pytorch.org/tutorials/beginner/basics/intro.html
 
+	https://towardsdatascience.com/recreating-keras-code-in-pytorch-an-introductory-tutorial-8db11084c60c
 
+_________________________________________________________
 
 
 
