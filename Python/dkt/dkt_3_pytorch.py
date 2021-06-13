@@ -6,9 +6,7 @@ import math
 import argparse
 import torch
 from torch import nn
-from torch.nn import Sequential
-from torch.nn.utils.rnn import pack_padded_sequence
-from torch.nn import LSTM, Linear, Sigmoid, CrossEntropyLoss
+from torch.nn import LSTM, Linear, Sigmoid, BCELoss
 from torch.optim.rmsprop import RMSprop
 
 
@@ -31,7 +29,6 @@ class Model(nn.Module):
         x, _ = self.rnn(x)  # <- ignore second output
         x = self.body(x)
         return x
-
 
 def main():
     parser = argparse.ArgumentParser(description='Process some integers.')
@@ -59,6 +56,13 @@ def main():
     print("Testing Sequences: %d" % len(testing_seqs))
     print("Number of skills: %d" % num_skills)
 
+    def loss_function(y_pred, y_true):
+        skill = y_true[:, :, 0:num_skills]
+        obs = y_true[:, :, num_skills]
+        rel_pred = torch.sum(y_pred * skill, dim=2)
+
+        return BCELoss(rel_pred, obs)
+
     # build model
     # model = Sequential(LSTM(input_size=num_skills * 2, hidden_size=hidden_units, bidirectional=True),
     #                    Linear(in_features=hidden_units, out_features=num_skills),
@@ -67,7 +71,7 @@ def main():
     model = Model(num_skills, hidden_units)
     print(f'\n{model}\n')
 
-    criterion = CrossEntropyLoss()
+    # criterion = CrossEntropyLoss()
     optimizer = RMSprop(model.parameters(), lr=0.001)
 
     # similiar to the above
@@ -88,7 +92,7 @@ def main():
 
             # forward + backward + optimize
             outputs = model(inputs)
-            loss = criterion(outputs, labels)
+            loss = loss_function(outputs, labels)
             loss.backward()
             optimizer.step()
 
@@ -119,14 +123,14 @@ def run_func(seqs, num_skills, batch_size, batch_done=None):
             x_seq = []
             y_seq = []
             xt_zeros = [0 for i in range(0, num_skills * 2)]
-            ct_zeros = [0 for i in range(0, num_skills)]
+            ct_zeros = [0 for i in range(0, num_skills + 1)]
             xt = xt_zeros[:]
             for skill, is_correct in seq:
                 x_seq.append(xt)
 
                 ct = ct_zeros[:]
                 ct[skill] = 1
-                ct[num_skills - 1] = is_correct
+                ct[num_skills] = is_correct
                 y_seq.append(ct)
 
                 # one hot encoding of (last_skill, is_correct)
@@ -145,20 +149,20 @@ def run_func(seqs, num_skills, batch_size, batch_done=None):
                 x_seq = []
                 y_seq = []
                 for t in range(0, maxlen):
-                    x_seq.append([1.0 for i in range(0, num_skills * 2)])
-                    y_seq.append([0.0 for i in range(0, num_skills)])
+                    x_seq.append([-1.0 for i in range(0, num_skills * 2)])
+                    y_seq.append([0.0 for i in range(0, num_skills + 1)])
                 x.append(x_seq)
                 y.append(y_seq)
 
         # arr = np.zeros(batch_size,maxlen,)
         # x = torch.tensor(x, dtype=torch.float)
 
-        X = pad_sequences(x, padding='post', maxlen=maxlen, dim=num_skills * 2, value=1.0)
+        X = pad_sequences(x, padding='post', maxlen=maxlen, dim=num_skills * 2, value=-1.0)
         X = torch.tensor(X, dtype=torch.float32)
         # X = pack_padded_sequence(X, lengths=lengths, batch_first=True, enforce_sorted=False)
-        Y = pad_sequences(y, padding='post', maxlen=maxlen, dim=num_skills, value=1.0)
+        Y = pad_sequences(y, padding='post', maxlen=maxlen, dim=num_skills + 1, value=-1.0)
         Y = torch.tensor(Y, dtype=torch.long)
-        Y = Y[:, -1, :]
+        #Y = Y[:, -1, :]
 
         yield X, Y
 
