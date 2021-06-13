@@ -8,6 +8,7 @@ import torch
 from torch import nn
 from torch.nn import LSTM, Linear, Sigmoid, BCELoss
 from torch.optim.rmsprop import RMSprop
+from sklearn.metrics import roc_auc_score
 
 
 # build model
@@ -26,9 +27,36 @@ class Model(nn.Module):
             nn.Sigmoid())
 
     def forward(self, x):
+        x = torch.from_numpy(x).float()
         x, _ = self.rnn(x)  # <- ignore second output
         x = self.body(x)
         return x
+
+    def reset_states(self):
+        return
+
+    def save_weights(self, model_file, overwrite=True):
+        #TODO
+        pass
+
+
+class Trainer:
+    def __init__(self, model, optimizer, loss_fun):
+        self.model = model
+        self.optimizer = optimizer
+        self.loss_fun = loss_fun
+
+    def train_on_batch(self, x, y):
+        self.optimizer.zero_grad()
+
+        # forward + backward + optimize
+        outputs = self.model(x)
+        loss = self.loss_fun(outputs, torch.from_numpy(y).float())
+        loss_value = loss.item()
+        loss.backward()
+        self.optimizer.step()
+        return loss_value
+
 
 def main():
     parser = argparse.ArgumentParser(description='Process some integers.')
@@ -47,8 +75,15 @@ def main():
     hidden_units = args.hiddenunits
     batch_size = args.batchsize
     epochs = args.epochs
+    time_window = args.timewindow
+
+    model_file = dataset + '.model_weights'
+    history_file = dataset + '.history'
+    preds_file = dataset + '.preds'
 
     overall_loss = [0.0]
+    preds = []
+    history = []
 
     # load dataset
     training_seqs, testing_seqs, num_skills = load_dataset(dataset, split_file)
@@ -57,11 +92,12 @@ def main():
     print("Number of skills: %d" % num_skills)
 
     def loss_function(y_pred, y_true):
+        loss = BCELoss()
         skill = y_true[:, :, 0:num_skills]
         obs = y_true[:, :, num_skills]
         rel_pred = torch.sum(y_pred * skill, dim=2)
 
-        return BCELoss(rel_pred, obs)
+        return loss(rel_pred, obs)
 
     # build model
     # model = Sequential(LSTM(input_size=num_skills * 2, hidden_size=hidden_units, bidirectional=True),
@@ -74,40 +110,80 @@ def main():
     # criterion = CrossEntropyLoss()
     optimizer = RMSprop(model.parameters(), lr=0.001)
 
+    model_trainer = Trainer(model, optimizer, loss_function)
+
+    # training function
+    def trainer(X, Y):
+        # Y = np.asfarray(Y, float)
+        overall_loss[0] += model_trainer.train_on_batch(X, y=Y)
+
+    # prediction
+    def predictor(X, Y):
+        with torch.no_grad():
+            batch_activations = model(X)
+        skill = Y[:, :, 0:num_skills]
+        obs = Y[:, :, num_skills]
+        y_pred = np.squeeze(np.array(batch_activations))
+
+        rel_pred = np.sum(y_pred * skill, axis=2)
+
+        for b in range(0, X.shape[0]):
+            for t in range(0, X.shape[1]):
+                if X[b, t, 0] == -1.0:
+                    continue
+                preds.append((rel_pred[b][t], obs[b][t]))
+
+    # call when prediction batch is finished
+    # resets LSTM state because we are done with all sequences in the batch
+    def finished_prediction_batch(percent_done):
+        model.reset_states()
+
     # similiar to the above
     def finished_batch(percent_done):
         print("(%4.3f %%) %f" % (percent_done, overall_loss[0]))
+        model.reset_states()
 
     # run the model
     for e in range(0, epochs):
-        running_loss = 0.0
-        running_loss_mini_batch = 0.0
-        print(f"=== Epoch # {e + 1}")
-        for i, data in enumerate(run_func(training_seqs, num_skills, batch_size, finished_batch), 0):
-            # get the inputs; data is a list of [inputs, labels]
-            inputs, labels = data
+        model.reset_states()
 
-            # zero the parameter gradients
-            optimizer.zero_grad()
+        # train
+        run_func(training_seqs, num_skills, trainer, batch_size, time_window, finished_batch)
 
-            # forward + backward + optimize
-            outputs = model(inputs)
-            loss = loss_function(outputs, labels)
-            loss.backward()
-            optimizer.step()
+        model.reset_states()
 
-            # print statistics
-            running_loss += loss.item()
-            running_loss_mini_batch += loss.item()
+        # test
+        run_func(testing_seqs, num_skills, predictor, batch_size, time_window, finished_prediction_batch)
 
-            if i % 100 == 0:  # print every 100 mini-batches
-                print('\t[%d, %5d] partial loss: %.3f' % (e + 1, i + 1, running_loss_mini_batch / 2000))
-                running_loss_mini_batch = 0.0
-        print(f"\nloss epoch {e + 1}: {running_loss}")
-        print("\n")
+        # compute AUC
+        auc = roc_auc_score([p[1] for p in preds], [p[0] for p in preds])
+
+        # log
+        history.append((overall_loss[0], auc))
+
+        # save model
+        model.save_weights(model_file, overwrite=True)
+        print("==== Epoch: %d, Test AUC: %f" % (e, auc))
+
+        # reset loss
+        overall_loss[0] = 0.0
+
+        # save predictions
+        with open(preds_file, 'w') as f:
+            f.write('was_heldout\tprob_recall\tstudent_recalled\n')
+            for pred in preds:
+                f.write('1\t%f\t%d\n' % (pred[0], pred[1]))
+
+        with open(history_file, 'w') as f:
+            for h in history:
+                f.write('\t'.join([str(he) for he in h]))
+                f.write('\n')
+
+        # clear preds
+        preds = []
 
 
-def run_func(seqs, num_skills, batch_size, batch_done=None):
+def run_func(seqs, num_skills, f, batch_size, time_window, batch_done=None):
     assert (min([len(s) for s in seqs]) > 0)
 
     # randomize samples
@@ -141,31 +217,30 @@ def run_func(seqs, num_skills, batch_size, batch_done=None):
             x.append(x_seq)
             y.append(y_seq)
 
-        lengths = [len(s) for s in x]
-        maxlen = max(lengths)
+        maxlen = max([len(s) for s in x])
+        maxlen = round_to_multiple(maxlen, time_window)
         # fill up the batch if necessary
         if len(x) < batch_size:
             for e in range(0, batch_size - len(x)):
                 x_seq = []
                 y_seq = []
-                for t in range(0, maxlen):
+                for t in range(0, time_window):
                     x_seq.append([-1.0 for i in range(0, num_skills * 2)])
                     y_seq.append([0.0 for i in range(0, num_skills + 1)])
                 x.append(x_seq)
                 y.append(y_seq)
 
-        # arr = np.zeros(batch_size,maxlen,)
-        # x = torch.tensor(x, dtype=torch.float)
-
         X = pad_sequences(x, padding='post', maxlen=maxlen, dim=num_skills * 2, value=-1.0)
-        X = torch.tensor(X, dtype=torch.float32)
-        # X = pack_padded_sequence(X, lengths=lengths, batch_first=True, enforce_sorted=False)
-        Y = pad_sequences(y, padding='post', maxlen=maxlen, dim=num_skills + 1, value=-1.0)
-        Y = torch.tensor(Y, dtype=torch.long)
-        #Y = Y[:, -1, :]
+        Y = pad_sequences(y, padding='post', maxlen=maxlen, dim=num_skills + 1, value=0.0)
 
-        yield X, Y
+        for t in range(0, maxlen, time_window):
+            f(X[:, t:(t + time_window), :], Y[:, t:(t + time_window), :])
 
+        processed += end_before - start_from
+
+        # reset the states for the next batch of sequences
+        if batch_done:
+            batch_done((processed * 100.0) / len(seqs))
 
 def round_to_multiple(x, base):
     return int(base * math.ceil(float(x) / base))
